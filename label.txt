@@ -1,0 +1,32 @@
+1.rally : 第幾分
+2.ball_round: 該rally的第幾球
+3.time: 該球影片時間
+4.frame_num: 該球開始frame
+5.end_frame_num: 該球結束frame
+6.roundscore_A: 該rally A選手結果比分
+7.roundscore_B: 該rally B選手結果比分
+8.player: 擊球者
+9.server: 類別資料(1:發球、2.擊球、3.死球)
+10.type: 擊球種類
+11.aroundhead: 是否有繞頭
+12.backhand: 是否反拍
+13.hit_height: 擊球點是否高於網(1:高於網、2.低於網)
+14.hit_area: 擊球位置(場地的哪個區塊)
+15.hit_x: 擊到球的座標x(為投影點，球頭垂直朝下對應到場地的位置)|
+16.hit_y: 擊到球的座標y(為投影點，球頭垂直朝下對應到場地的位置)|
+17.landing_height: 下一拍擊球是否高於網(1:高於網、2.低於網)
+18.landing_area: 下一拍擊球位置
+19.landing_x: 下一拍擊球座標x
+20.landing_y: 下一拍擊球座標y
+(所有的landing跟hit都符合:下一個hit是上一個landing)
+21.lose_reason: 掉分的原因
+22.win_reason: 得分的原因
+23.getpoint_player: 得分選手
+24.flaw:[用不到]
+25.player_location_area: 擊球者的位置
+26.player_location_x: 擊球者慣用腳腳尖的座標x
+27.player_location_y: 擊球者慣用腳腳尖的座標y
+28.opponent_location_area: 等待擊球者的位置
+29.opponent_location_x: 等待擊球者慣用腳腳尖的座標x
+30.opponent_location_y: 等待擊球者慣用腳腳尖的座標y
+31.db[用不到]

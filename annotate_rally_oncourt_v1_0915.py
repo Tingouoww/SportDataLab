@@ -22,6 +22,11 @@ import cv2
 from typing import Dict, Tuple, Optional
 
 def read_csv_zh(path: str) -> pd.DataFrame:
+    """
+    讀取csv檔
+    encodings : 嘗試不同encode方式
+    回傳pandas.DataFrame
+    """
     encodings = ["utf-8", "utf-8-sig", "cp950", "big5", "latin1"]
     last_err = None
     for enc in encodings:
@@ -32,6 +37,13 @@ def read_csv_zh(path: str) -> pd.DataFrame:
     raise last_err
 
 def normalize_player(p) -> str:
+    """
+    標準化player為A/B
+    1. 若為string : 看開頭是A還是B並回傳
+    2. 若是數字 : 1 -> A, 2 -> B
+    3. 若皆非 : 回傳字串原樣
+    (但set1 player欄位僅A,B)
+    """
     if isinstance(p, str):
         s = p.strip().upper()
         if s.startswith("A"): return "A"
@@ -45,7 +57,13 @@ def normalize_player(p) -> str:
     return str(p)
 
 def load_rallyseg(rallyseg_path: str) -> pd.DataFrame:
-    df = read_csv_zh(rallyseg_path)
+    """
+    讀取 RallySeg.csv
+    標準化欄位名稱Start/End/Rally (but RallySeg.csv doesn't have column 'Rally')
+    沒有 'Rally' 自動用行序1,2,3....補上
+    取 Rally, Start, End 欄位轉成數字並回傳僅含三欄位的DataFrame
+    """
+    df = read_csv_zh(rallyseg_path) # 讀取rallyseg檔案(for rally start frame)
     lower = {c.lower(): c for c in df.columns}
     if "start" not in lower or "end" not in lower:
         raise ValueError("RallySeg.csv 必須包含 'Start' 與 'End' 欄位")
@@ -59,13 +77,19 @@ def load_rallyseg(rallyseg_path: str) -> pd.DataFrame:
     return df[["Rally", "Start", "End"]]
 
 def build_series(set1: pd.DataFrame, rally_id: int, start_global: int, debug=False) -> Dict[str, pd.DataFrame]:
+    """
+    從 set1 中擷取 rally 資料 ["player", "player_location_x", "player_location_y", "local_frame", "ball_round"]
+    1. local_frame = frame_num - start
+    2. 依據 local_frame, ball_round排序
+    回傳 dict{'A':dfA, 'B':dfB}
+    """
     sub = set1[set1["rally"] == rally_id].copy()
     if debug:
         print(f"[DEBUG] set1 rows for rally {rally_id}: {len(sub)}")
     sub["local_frame"] = pd.to_numeric(sub["frame_num"], errors="coerce") - int(start_global)
 
     need = ["player", "player_location_x", "player_location_y", "local_frame", "ball_round"]
-    sub = sub.dropna(subset=need)
+    sub = sub.dropna(subset=need) #移除含空缺值資料列
     sub = sub[sub["local_frame"] >= 0]
     sub["player_norm"] = sub["player"].apply(normalize_player)
     sub = sub.sort_values(by=["local_frame", "ball_round"], kind="mergesort").reset_index(drop=True)
@@ -84,6 +108,10 @@ def build_series(set1: pd.DataFrame, rally_id: int, start_global: int, debug=Fal
     return series
 
 def to_int_pt(x, y, w, h) -> Optional[Tuple[int,int]]:
+    """
+    將 (x, y) 轉成pixel座標
+    若超出範圍或不是數字則return None
+    """
     if not (np.isfinite(x) and np.isfinite(y)):
         return None
     xi, yi = int(round(x)), int(round(y))
@@ -92,6 +120,12 @@ def to_int_pt(x, y, w, h) -> Optional[Tuple[int,int]]:
     return None
 
 def put_marker(frame, pt: Optional[Tuple[int,int]], label: Optional[str], color, radius=6, font_scale=0.6):
+    """
+    在 frame 上畫一個實心圓點，並可選擇在旁邊加文字標籤。
+    - pt: (x,y) 像素座標
+    - label: 'A' 或 'B'；若為 None，則不畫文字
+    - color: BGR 顏色
+    """
     if pt is None: return
     h, w = frame.shape[:2]
     x, y = pt
@@ -101,6 +135,15 @@ def put_marker(frame, pt: Optional[Tuple[int,int]], label: Optional[str], color,
         cv2.putText(frame, label, (x + 8, y - 8), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 2, cv2.LINE_AA)
 
 def main():
+    """
+    主程式：
+    - 讀取 set1 與 RallySeg，挑選指定 rally 的資料
+    - 逐 frame 讀取影片
+    - 對每位選手，只畫「最近一段」箭頭：
+        * 第一拍：只畫一個點
+        * 第二拍之後：畫 p0 點、p1 點（帶 A/B 標籤）、以及 p0→p1 的箭頭
+    - 將結果寫入輸出影片
+    """
     ap = argparse.ArgumentParser(description="Overlay latest-segment arrow (prev→current) with both endpoints marked.")
     ap.add_argument("--video", required=True, help="裁切後的單一 rally 影片，或主影片（若用主影片請勿加 --rally_clip）")
     ap.add_argument("--set1", required=True, help="set1.csv")
@@ -114,6 +157,7 @@ def main():
     ap.add_argument("--debug", action="store_true", help="顯示除錯訊息")
     args = ap.parse_args()
 
+    # set1.csv
     set1 = read_csv_zh(args.set1)
     need_cols = ["rally","ball_round","player","frame_num","player_location_x","player_location_y","end_frame_num"]
     for c in need_cols:
@@ -122,6 +166,7 @@ def main():
     for c in ["rally","ball_round","frame_num","end_frame_num","player_location_x","player_location_y"]:
         set1[c] = pd.to_numeric(set1[c], errors="coerce")
 
+    # RallySeg.csv
     rseg = load_rallyseg(args.rallyseg)
     row = rseg[rseg["Rally"] == int(args.rally_id)]
     if row.empty:

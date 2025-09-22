@@ -289,8 +289,8 @@ def render_panel_image(frame, rect, highlight_dir: Optional[str], panel_imgs: di
 def main():
     ap = argparse.ArgumentParser(description="Latest segment arrow + per-player 5-direction condition panels.")
     ap.add_argument("--video", required=True)
-    ap.add_argument("--set1", required=True)
-    ap.add_argument("--rallyseg", required=True)
+    ap.add_argument("--set1", required=False, default="set1.csv")
+    ap.add_argument("--rallyseg", required=False, default="RallySeg.csv")
     ap.add_argument("--rally_id", type=int, required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--rally_clip", action="store_true")

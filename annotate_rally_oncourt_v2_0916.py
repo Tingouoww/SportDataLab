@@ -20,6 +20,11 @@ from typing import Dict, Tuple, Optional, List
 # ---------- 基礎 I/O ----------
 
 def read_csv_zh(path: str) -> pd.DataFrame:
+    """
+    讀取csv檔
+    encodings : 嘗試不同encode方式
+    回傳pandas.DataFrame
+    """
     encodings = ["utf-8", "utf-8-sig", "cp950", "big5", "latin1"]
     last_err = None
     for enc in encodings:
@@ -30,6 +35,13 @@ def read_csv_zh(path: str) -> pd.DataFrame:
     raise last_err
 
 def normalize_player(p) -> str:
+    """
+    標準化player為A/B
+    1. 若為string : 看開頭是A還是B並回傳
+    2. 若是數字 : 1 -> A, 2 -> B
+    3. 若皆非 : 回傳字串原樣
+    (但set1 player欄位僅A,B)
+    """
     if isinstance(p, str):
         s = p.strip().upper()
         if s.startswith("A"): return "A"
@@ -43,6 +55,12 @@ def normalize_player(p) -> str:
     return str(p)
 
 def load_rallyseg(rallyseg_path: str) -> pd.DataFrame:
+    """
+    讀取 RallySeg.csv
+    標準化欄位名稱Start/End/Rally (but RallySeg.csv doesn't have column 'Rally')
+    沒有 'Rally' 自動用行序1,2,3....補上
+    取 Rally, Start, End 欄位轉成數字並回傳僅含三欄位的DataFrame
+    """
     df = read_csv_zh(rallyseg_path)
     lower = {c.lower(): c for c in df.columns}
     if "start" not in lower or "end" not in lower:
@@ -100,6 +118,10 @@ def build_series(set1: pd.DataFrame, rally_id: int, start_global: int, debug=Fal
 # ---------- 幾何輔助 ----------
 
 def to_int_pt(x, y, w, h) -> Optional[Tuple[int,int]]:
+    """
+    將 (x, y) 轉成pixel座標
+    若超出範圍或不是數字則return None
+    """
     if not (np.isfinite(x) and np.isfinite(y)):
         return None
     xi, yi = int(round(x)), int(round(y))
@@ -108,6 +130,12 @@ def to_int_pt(x, y, w, h) -> Optional[Tuple[int,int]]:
     return None
 
 def put_marker(frame, pt: Optional[Tuple[int,int]], label: Optional[str], color, radius=6, font_scale=0.6):
+    """
+    在 frame 上畫一個實心圓點，並可選擇在旁邊加文字標籤。
+    - pt: (x,y) 像素座標
+    - label: 'A' 或 'B'；若為 None，則不畫文字
+    - color: BGR 顏色
+    """
     if pt is None: return
     h, w = frame.shape[:2]
     x, y = pt
@@ -283,8 +311,8 @@ def main():
         raise RuntimeError(f"無法開啟輸出檔：{args.out}")
 
     # 顏色（BGR）
-    colorA = (0, 0, 0)       # 黑（你上一段的配置）
-    colorB = (0, 0, 255)     # 紅（注意：OpenCV BGR，紅色是 (0,0,255)）
+    colorA = (0, 0, 0)       # 黑
+    colorB = (0, 0, 255)     # 紅
 
     # 面板尺寸與位置（右上 B、右下 A）
     panel_w = max(150, w // 5)

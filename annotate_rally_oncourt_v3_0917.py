@@ -432,8 +432,6 @@ def main():
                     put_marker(frame, p1, "B", colorB, radius=args.radius)
 
         # 畫兩個面板（五向箭頭，單一方向高亮）
-        #draw_five_arrows_panel(frame, rect_B, dirB, color_outline=(0,0,255), color_fill=(0,0,255), label="B")
-        #draw_five_arrows_panel(frame, rect_A, dirA, color_outline=(0,0,255), color_fill=(0,0,255), label="A")
         render_panel_image(frame, rect_B, dirB, panel_imgs, label="B", alpha_bg=0.25)
         render_panel_image(frame, rect_A, dirA, panel_imgs, label="A", alpha_bg=0.25)
 

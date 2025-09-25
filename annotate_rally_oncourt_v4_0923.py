@@ -235,6 +235,9 @@ def draw_five_arrows_panel(frame, rect, highlight_dir: Optional[str], color_outl
 # ---------- 主流程 ----------
 
 def main():
+    """
+    python annotate_rally_oncourt_v4_0923.py --video 1_00_01.mp4 --rally_id 1 --out rally_oncourt_v4_2.mp4 --rally_clip
+    """
     ap = argparse.ArgumentParser(description="Latest segment arrow + per-player 5-direction condition panels.")
     ap.add_argument("--video", required=True)
     ap.add_argument("--set1", required=False, default="set1.csv")
@@ -343,15 +346,15 @@ def main():
                                   A_bh[j] if j < len(A_bh) else 0)
 
             # 最近一段箭頭可視化
-            if j <= 0:
-                p = p0 = to_int_pt(A_x[0], A_y[0], w, h)
+            if j < 0:
+                p = to_int_pt(A_x[0], A_y[0], w, h)
                 put_marker(frame, p, "A", colorA, radius=args.radius)
-            elif j > 0 and j < len(A_f) - 1:
+            elif j >= 0 and j < len(A_f) - 1:
                 p0 = to_int_pt(A_x[j], A_y[j], w, h)
                 p1 = to_int_pt(A_x[j+1], A_y[j+1],   w, h)
                 if p0 and p1:
                     put_marker(frame, p0, None, colorA, radius=args.radius)
-                    cv2.arrowedLine(frame, p0, p1, colorA, args.thickness, line_type=cv2.LINE_AA, tipLength=0.15)
+                    cv2.arrowedLine(frame, p0, p1, colorA, args.thickness, line_type=cv2.LINE_AA, tipLength=0.3)
                     put_marker(frame, p1, "A", colorA, radius=args.radius)
             elif j == len(A_f) - 1:
                 p = to_int_pt(A_x[j], A_y[j], w, h)
@@ -366,20 +369,35 @@ def main():
                                   B_hh[j] if j < len(B_hh) else 0,
                                   B_bh[j] if j < len(B_bh) else 0)
                 
-            if j <= 0:
+            if j < 0:
                 p = to_int_pt(B_x[0], B_y[0], w, h)
                 put_marker(frame, p, "B", colorB, radius=args.radius)
-            elif j > 0 and j < len(B_f)-1:
+            elif j >= 0 and j < len(B_f)-1:
                 p0 = to_int_pt(B_x[j], B_y[j], w, h)
                 p1 = to_int_pt(B_x[j+1], B_y[j+1],   w, h)
                 if p0 and p1:
                     put_marker(frame, p0, None, colorB, radius=args.radius)
-                    cv2.arrowedLine(frame, p0, p1, colorB, args.thickness, line_type=cv2.LINE_AA, tipLength=0.15)
+                    cv2.arrowedLine(frame, p0, p1, colorB, args.thickness, line_type=cv2.LINE_AA, tipLength=0.2)
                     put_marker(frame, p1, "B", colorB, radius=args.radius)            
             elif j == len(B_f)-1:
                 p = to_int_pt(B_x[j], B_y[j], w, h)
                 put_marker(frame, p, "B", colorB, radius=args.radius)
                 
+        jA_now = np.searchsorted(A_f, i, side="right") - 1 if len(A_f) > 0 else -1
+        jB_now = np.searchsorted(B_f, i, side="right") - 1 if len(B_f) > 0 else -1
+
+        lastA = A_f[jA_now] if jA_now >= 0 else -1   # A 最近一拍（<= i）的 local_frame
+        lastB = B_f[jB_now] if jB_now >= 0 else -1   # B 最近一拍（<= i）的 local_frame
+
+        # 誰的最近一拍更晚（數值較大），誰就是當前擊球者
+        if lastA > lastB:
+            dirB = None           # A 擊球 ⇒ 關掉 B 面板
+        elif lastB > lastA:
+            dirA = None           # B 擊球 ⇒ 關掉 A 面板
+        else:
+            # lastA == lastB：多半是尚未有任何一拍（-1），或資料同幀重疊的罕見情況
+            dirA = None
+            dirB = None
 
         # 畫兩個面板（五向箭頭，單一方向高亮）
         draw_five_arrows_panel(frame, rect_B, dirB, color_outline=(0,0,255), color_fill=(0,0,255), label="B")
